@@ -1,8 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Form, File, UploadFile
 from db import events_collection
 from pydantic import BaseModel
 from bson.objectid import ObjectId
 from utils import replace_mongo_id
+from typing import Annotated
 
 
 class EventModel(BaseModel):
@@ -22,7 +23,7 @@ def get_home():
 
 
 # Events endpoints
-@app.get("/events")
+@app.get("/events")  # query parameter
 def get_events(title="", description="", limit=10, skip=0):
     # Get all events from database
     events = events_collection.find(
@@ -31,9 +32,9 @@ def get_events(title="", description="", limit=10, skip=0):
                 {"title": {"$regex": title, "$options": "i"}},
                 {"description": {"$regex": description, "$options": "i"}},
             ]
-        }, 
+        },
         limit=int(limit),
-          skip=int(skip)
+        skip=int(skip),
     ).to_list()
 
     # Return response
@@ -41,14 +42,18 @@ def get_events(title="", description="", limit=10, skip=0):
 
 
 @app.post("/events")
-def post_events(event: EventModel):
+def post_events(
+    title: Annotated[str, Form()],
+    description: Annotated[str, Form()],
+    flyer: Annotated[UploadFile, File()],
+):
     # insert event into database
-    events_collection.insert_one(event.model_dump())
+    # events_collection.insert_one(event.model_dump())
     # return response
     return {"message": "Events added successfully"}
 
 
-@app.get("/events/{event_id}")
+@app.get("/events/{event_id}")  # path parameter
 def get_events_id(event_id):
     # get event from database by id
     event = events_collection.find_one({"_id": ObjectId(event_id)})
