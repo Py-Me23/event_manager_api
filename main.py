@@ -1,61 +1,50 @@
-from fastapi import FastAPI, Form, File, UploadFile
-from db import events_collection
-from pydantic import BaseModel
-from bson.objectid import ObjectId
-from utils import replace_mongo_id
-from typing import Annotated
+from fastapi import FastAPI
+import cloudinary
+from routes.events import events_router
+from routes.users import users_router
+import os
+from dotenv import load_dotenv
+
+# configure cloudinary
+cloudinary.config(
+    cloud_name=os.getenv("CLOUD_NAME"),
+    api_key=os.getenv("API_KEY"),
+    api_secret=os.getenv("API_SECRET"),
+)
+
+tags_metadata = [
+    {
+        "name": "HOME",
+        "desciption": "General API information",
+    },
+    {
+        "name": "EVENTS",
+        "desciption": "Endpoints for searching  events",
+    },
+    {
+        "name": "GET ONE EVENTS",
+        "desciption": "Endpoints for searching  one event",
+    },
+]
 
 
-class EventModel(BaseModel):
-    title: str
-    description: str
+# for emoji: windows + the colon key
+app = FastAPI(
+    title="🎊Events Finder API",
+    description="Welcome to 😘AfiSante Events",
+    openapi_tags=tags_metadata,
+)
 
-
-app = FastAPI()
 
 # http://localhost:8000/docs is the same as  http://127.0.0.1:8000
 # the end point has a method of get, the slash means homepage. status code by default is 200.
 
 
-@app.get("/", status_code=204, response_description="No content")
+@app.get("/", tags=["HOME"])
 def get_home():
     return {"message": "You are on the home page"}
 
 
-# Events endpoints
-@app.get("/events")  # query parameter
-def get_events(title="", description="", limit=10, skip=0):
-    # Get all events from database
-    events = events_collection.find(
-        filter={
-            "$or": [
-                {"title": {"$regex": title, "$options": "i"}},
-                {"description": {"$regex": description, "$options": "i"}},
-            ]
-        },
-        limit=int(limit),
-        skip=int(skip),
-    ).to_list()
-
-    # Return response
-    return {"data": list(map(replace_mongo_id, events))}
-
-
-@app.post("/events")
-def post_events(
-    title: Annotated[str, Form()],
-    description: Annotated[str, Form()],
-    flyer: Annotated[UploadFile, File()],
-):
-    # insert event into database
-    # events_collection.insert_one(event.model_dump())
-    # return response
-    return {"message": "Events added successfully"}
-
-
-@app.get("/events/{event_id}")  # path parameter
-def get_events_id(event_id):
-    # get event from database by id
-    event = events_collection.find_one({"_id": ObjectId(event_id)})
-    # return response
-    return {"data": replace_mongo_id(event)}
+# include routers
+app.include_router(events_router)
+app.include_router(users_router)
