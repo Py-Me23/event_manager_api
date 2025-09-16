@@ -12,4 +12,6 @@ mongo_client = MongoClient(os.getenv("MONGO_URI"))
 event_manager_db = mongo_client["event_manager_db"]
 
 # pick a code to operate on
-events_collection= event_manager_db["events"]
+events_collection = event_manager_db["events"]
+
+users_collection = event_manager_db["users"]
